@@ -8,7 +8,7 @@
 import Foundation
 import Cocoa
 import CoreImage
-import Utility
+import SPMUtility
 import Basic
 
 /*--------------------------------------------------------------------------------
@@ -42,8 +42,8 @@ if #available(OSX 10.13.4, *) {
         
         // Get value of arguments(="text") from the parsed result
         if let filePath = result.get(filepathArg) {
-            filePathStr = filePath.path.asString
-            fileParentDirPathStr = filePath.path.parentDirectory.asString
+            filePathStr = filePath.path.pathString
+            fileParentDirPathStr = filePath.path.parentDirectory.pathString
         }
         
         // Get option value
