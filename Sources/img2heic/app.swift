@@ -11,12 +11,15 @@ import CoreImage
 import ArgumentParser
 
 @main
-struct MyApp : ParsableCommand {
+struct App : ParsableCommand {
     @Argument(help: "\(ConstCommandDescription.filePath)")
         var filePathStr: String
     
     @Option(name: .shortAndLong, help: "\(ConstCommandDescription.compressionLevel)")
         var compress: String?
+    
+    @Flag(help: "show detail logs")
+        var verbose: Bool = false
     
     mutating func run() throws {
         if #available(OSX 15.0, *) {
@@ -60,17 +63,37 @@ struct MyApp : ParsableCommand {
             
             // new CIContext
             let ciContext : CIContext = CIContext(options: nil)
+
+            // get image bit per component
+            var bitsPerComponent = ConstBitValue.defaultValue
+            guard let imageSource = CGImageSourceCreateWithURL(sourceFileUrl as CFURL, nil) else {
+                throw NSError(domain: "Invalid File", code: -1, userInfo: nil)
+            }
+            guard let cgImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) else {
+                throw NSError(domain: "Image process failure", code: -1, userInfo: nil)
+            }
             
-            // save the image to the same directory as filename.heic
-            let ciImage : CIImage = CIImage(contentsOf: sourceFileUrl)!
+            bitsPerComponent = cgImage.bitsPerComponent
+            
+            if verbose {
+                print("Bits per pixel: \(cgImage.bitsPerPixel)")
+                print("Bits per component: \(bitsPerComponent)")
+            }
+            
+            let ciImage : CIImage = CIImage(cgImage: cgImage)
             
             // Get CGColorSpace from the original file
             let cgColorSpace : CGColorSpace = (ciImage.colorSpace!)
             
             // convert the file to a heic image
+            // 10 or more bit color file is converted to HEIF10
             do {
                 print("Converting : \(filePathStr)")
-                try ciContext.writeHEIFRepresentation(of: ciImage, to: destinationFilePath.toFileUrl(), format: CIFormat.RGBA8, colorSpace: cgColorSpace, options: ciContextOptions)
+                if bitsPerComponent >= 10 {
+                    try ciContext.writeHEIF10Representation(of: ciImage, to: destinationFilePath.toFileUrl(), colorSpace: cgColorSpace, options: ciContextOptions)
+                } else {
+                    try ciContext.writeHEIFRepresentation(of: ciImage, to: destinationFilePath.toFileUrl(), format: CIFormat.RGBA8, colorSpace: cgColorSpace, options: ciContextOptions)
+                }
                 print("Converted to : " + destinationFilePath)
             } catch {
                 print("Failed to convert. File:\(filePathStr) \n Error:\(error)")

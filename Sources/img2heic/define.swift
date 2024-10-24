@@ -22,6 +22,10 @@ struct ConstCommandDescription {
     static let outputPath = "File or Folder path for the compressed image file."
 }
 
+struct ConstBitValue {
+    static let defaultValue : Int = 8
+}
+
 struct ConstExitCode {
     static let success : Int32 = 0
     static let failure : Int32 = 1
