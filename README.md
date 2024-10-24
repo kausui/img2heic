@@ -2,7 +2,7 @@
 img2 heic is a command line tool to convert an image file to heic image for Mac.
 
 ## System Requirements
-- macOS 10.13.4 or higher
+- macOS 15.0 or higher
 
 ## Build
 1. Open the terminal.
@@ -21,6 +21,7 @@ Convert a image file with compression level
 
 compression level is between 0 to 1.0. 0 means maximum compression. 1.0 means maximum image quality. The default is 0.8. 
 
+10 or more bits color file is converted to 10bit heif image.
 Converted image file is generated in the same folder the original file is in.
 
 ## LICENSE
