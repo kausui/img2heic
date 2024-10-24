@@ -39,7 +39,7 @@ struct ConstFileExtension {
 }
 
 struct ConstMessages {
-    static let osVersionError = "img2heic requires macOS version 10.13.4 or higher."
+    static let osVersionError = "img2heic requires macOS version 15.0 or higher."
 }
 
 // isCompressionLevelOk checks value of compress argument
