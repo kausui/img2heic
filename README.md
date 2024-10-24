@@ -9,7 +9,7 @@ img2 heic is a command line tool to convert an image file to heic image for Mac.
 2. Clone the repositry.
 3. Change the directory to the downloaded folder at step 2.
 4. Enter a command "swift build".
-5. img2heic binary is generated in "./.build/x86_64-apple-macosx/debug/" directory.
+5. img2heic binary is generated in "./.build/arm64-apple-macosx/debug/" OR "./.build/x86_64-apple-macosx/debug/" directory.
 
 ## Usage
 
