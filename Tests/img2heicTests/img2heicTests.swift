@@ -31,6 +31,14 @@ final class Img2heicTests: XCTestCase {
     XCTAssertThrowsError(try App.parse(["image.png", "--compress", "1.1"]))
   }
 
+  func testArgumentParserAcceptsOutputFileAndDirectoryOptions() throws {
+    let longOption = try App.parse(["image.png", "--output", "converted.heic"])
+    XCTAssertEqual(longOption.output, "converted.heic")
+
+    let shortOption = try App.parse(["image.png", "-o", "output directory"])
+    XCTAssertEqual(shortOption.output, "output directory")
+  }
+
   func testCLIReportsValidationFailureWithNonzeroExit() throws {
     let executable = productsDirectory.appendingPathComponent("img2heic")
     let process = Process()
@@ -60,6 +68,73 @@ final class Img2heicTests: XCTestCase {
       ImageConverter.destinationURL(for: withoutExtension).path,
       "/tmp/画像 file.heic"
     )
+  }
+
+  func testExplicitOutputFileAndDirectoryResolution() throws {
+    let directory = try makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let inputURL = directory.appendingPathComponent("入力 image.png")
+    let outputDirectory = directory.appendingPathComponent("出力 directory", isDirectory: true)
+    try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: false)
+    let converter = ImageConverter()
+
+    XCTAssertEqual(
+      try converter.resolveOutputURL(
+        for: inputURL,
+        requestedOutputURL: directory.appendingPathComponent("任意 name.heic")
+      ),
+      directory.appendingPathComponent("任意 name.heic")
+    )
+    XCTAssertEqual(
+      try converter.resolveOutputURL(
+        for: inputURL,
+        requestedOutputURL: directory.appendingPathComponent("extensionless")
+      ),
+      directory.appendingPathComponent("extensionless.heic")
+    )
+    XCTAssertEqual(
+      try converter.resolveOutputURL(for: inputURL, requestedOutputURL: outputDirectory),
+      outputDirectory.appendingPathComponent("入力 image.heic")
+    )
+  }
+
+  func testInvalidExplicitOutputPathsAreRejected() throws {
+    let directory = try makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let inputURL = directory.appendingPathComponent("image.png")
+    let converter = ImageConverter()
+
+    let wrongExtension = directory.appendingPathComponent("image.jpg")
+    XCTAssertThrowsError(
+      try converter.resolveOutputURL(for: inputURL, requestedOutputURL: wrongExtension)
+    ) {
+      XCTAssertEqual(
+        $0 as? ImageConversionError,
+        .invalidOutputExtension(wrongExtension.path)
+      )
+    }
+
+    let missingDirectory = directory.appendingPathComponent("missing", isDirectory: true)
+    XCTAssertThrowsError(
+      try converter.resolveOutputURL(for: inputURL, requestedOutputURL: missingDirectory)
+    ) {
+      XCTAssertEqual(
+        $0 as? ImageConversionError,
+        .outputDirectoryDoesNotExist(missingDirectory.path)
+      )
+    }
+
+    let nonDirectory = directory.appendingPathComponent("not-a-directory")
+    try Data("file".utf8).write(to: nonDirectory)
+    let nestedOutput = nonDirectory.appendingPathComponent("image.heic")
+    XCTAssertThrowsError(
+      try converter.resolveOutputURL(for: inputURL, requestedOutputURL: nestedOutput)
+    ) {
+      XCTAssertEqual(
+        $0 as? ImageConversionError,
+        .outputDirectoryIsNotDirectory(nonDirectory.path)
+      )
+    }
   }
 
   func testMissingDirectoryAndNonImageErrors() throws {
@@ -107,6 +182,25 @@ final class Img2heicTests: XCTestCase {
 
     let gps = properties[kCGImagePropertyGPSDictionary] as? [CFString: Any]
     XCTAssertEqual((gps?[kCGImagePropertyGPSLatitude] as? NSNumber)?.doubleValue, 35.0)
+  }
+
+  func testConversionWritesToExplicitOutputDirectory() throws {
+    let directory = try makeTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: directory) }
+    let inputURL = directory.appendingPathComponent("source.png")
+    let outputDirectory = directory.appendingPathComponent("converted", isDirectory: true)
+    try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: false)
+    try writePNG(to: inputURL)
+
+    let result = try ImageConverter().convert(inputURL: inputURL, outputURL: outputDirectory)
+
+    XCTAssertEqual(result.outputURL, outputDirectory.appendingPathComponent("source.heic"))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: result.outputURL.path))
+    XCTAssertFalse(
+      FileManager.default.fileExists(
+        atPath: ImageConverter.destinationURL(for: inputURL).path
+      )
+    )
   }
 
   func testExistingOutputIsNeverChanged() throws {

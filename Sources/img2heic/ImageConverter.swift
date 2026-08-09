@@ -28,6 +28,9 @@ enum ImageConversionError: LocalizedError, Equatable {
   case unsupportedImage(String)
   case unableToDecode(String)
   case missingColorSpace
+  case invalidOutputExtension(String)
+  case outputDirectoryDoesNotExist(String)
+  case outputDirectoryIsNotDirectory(String)
   case outputAlreadyExists(String)
   case unableToCreateOutput(String)
 
@@ -45,6 +48,12 @@ enum ImageConversionError: LocalizedError, Equatable {
       return "Unable to decode image: \(path)"
     case .missingColorSpace:
       return "Unable to create a compatible RGB color space."
+    case .invalidOutputExtension(let path):
+      return "Output file must use the .heic extension: \(path)"
+    case .outputDirectoryDoesNotExist(let path):
+      return "Output directory does not exist: \(path)"
+    case .outputDirectoryIsNotDirectory(let path):
+      return "Output parent path is not a directory: \(path)"
     case .outputAlreadyExists(let path):
       return "Output file already exists: \(path)"
     case .unableToCreateOutput(let path):
@@ -82,7 +91,9 @@ struct ImageConverter {
     inputURL.deletingPathExtension().appendingPathExtension("heic")
   }
 
-  func convert(inputURL originalURL: URL) throws -> ConversionResult {
+  func convert(inputURL originalURL: URL, outputURL requestedOutputURL: URL? = nil) throws
+    -> ConversionResult
+  {
     guard Self.isValidQuality(quality) else {
       throw ImageConversionError.invalidQuality(quality)
     }
@@ -90,7 +101,10 @@ struct ImageConverter {
     let inputURL = originalURL.standardizedFileURL
     try validateInput(inputURL)
 
-    let outputURL = Self.destinationURL(for: inputURL)
+    let outputURL = try resolveOutputURL(
+      for: inputURL,
+      requestedOutputURL: requestedOutputURL
+    )
     guard !fileManager.fileExists(atPath: outputURL.path) else {
       throw ImageConversionError.outputAlreadyExists(outputURL.path)
     }
@@ -218,6 +232,51 @@ struct ImageConverter {
     guard values?.isRegularFile == true else {
       throw ImageConversionError.inputIsNotAFile(inputURL.path)
     }
+  }
+
+  func resolveOutputURL(for inputURL: URL, requestedOutputURL: URL?) throws -> URL {
+    guard let requestedOutputURL else {
+      return Self.destinationURL(for: inputURL)
+    }
+
+    let requestedURL = requestedOutputURL.standardizedFileURL
+    var isDirectory: ObjCBool = false
+    let requestedPathExists = fileManager.fileExists(
+      atPath: requestedURL.path,
+      isDirectory: &isDirectory
+    )
+
+    if requestedPathExists, isDirectory.boolValue {
+      return
+        requestedURL
+        .appendingPathComponent(inputURL.deletingPathExtension().lastPathComponent)
+        .appendingPathExtension("heic")
+    }
+
+    if !requestedPathExists, requestedURL.hasDirectoryPath {
+      throw ImageConversionError.outputDirectoryDoesNotExist(requestedURL.path)
+    }
+
+    let outputURL: URL
+    if requestedURL.pathExtension.isEmpty {
+      outputURL = requestedURL.appendingPathExtension("heic")
+    } else {
+      guard requestedURL.pathExtension.lowercased() == "heic" else {
+        throw ImageConversionError.invalidOutputExtension(requestedURL.path)
+      }
+      outputURL = requestedURL
+    }
+
+    let parentURL = outputURL.deletingLastPathComponent()
+    var parentIsDirectory: ObjCBool = false
+    guard fileManager.fileExists(atPath: parentURL.path, isDirectory: &parentIsDirectory) else {
+      throw ImageConversionError.outputDirectoryDoesNotExist(parentURL.path)
+    }
+    guard parentIsDirectory.boolValue else {
+      throw ImageConversionError.outputDirectoryIsNotDirectory(parentURL.path)
+    }
+
+    return outputURL
   }
 
   private func loadGainMap(from inputURL: URL, source: CGImageSource) -> CIImage? {

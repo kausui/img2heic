@@ -24,6 +24,12 @@ struct App: ParsableCommand {
   )
   var compress: Double = ConstCompressionValue.def
 
+  @Option(
+    name: .shortAndLong,
+    help: "Output HEIC file or existing directory. Defaults to the input directory."
+  )
+  var output: String?
+
   @Flag(help: "Show image analysis and conversion details.")
   var verbose = false
 
@@ -35,8 +41,12 @@ struct App: ParsableCommand {
 
   mutating func run() throws {
     let inputURL = URL(fileURLWithPath: filePath).standardizedFileURL
+    let outputURL = output.map {
+      URL(fileURLWithPath: $0, isDirectory: $0.hasSuffix("/"))
+        .standardizedFileURL
+    }
     let converter = ImageConverter(quality: compress)
-    let result = try converter.convert(inputURL: inputURL)
+    let result = try converter.convert(inputURL: inputURL, outputURL: outputURL)
 
     print("ImageFile: \(result.inputURL.path)")
     if verbose {

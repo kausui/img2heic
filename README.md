@@ -35,7 +35,7 @@ swift build -c release --show-bin-path
 ## Usage
 
 ```text
-img2heic <input> [-c|--compress <0...1>] [--verbose]
+img2heic <input> [-c|--compress <0...1>] [-o|--output <path>] [--verbose]
 ```
 
 Convert an image using the default compression quality (`0.8`):
@@ -50,6 +50,13 @@ Choose a compression quality:
 ./img2heic path-to-image-file --compress 0.9
 ```
 
+Choose an output file or an existing output directory:
+
+```sh
+./img2heic path-to-image-file --output converted.heic
+./img2heic path-to-image-file --output path-to-output-directory
+```
+
 Show the detected bit depth, color space, HDR headroom, gain-map status, and
 selected conversion mode:
 
@@ -61,9 +68,10 @@ Compression quality must be a finite number from `0` to `1`. A value of `0`
 produces the smallest output; `1` produces the highest image quality supported
 by the encoder.
 
-The output is written beside the input with a `.heic` extension. For example,
-`photo.jpg` becomes `photo.heic`. Conversion stops with an error if that output
-already exists.
+By default, the output is written beside the input with a `.heic` extension.
+For example, `photo.jpg` becomes `photo.heic`. An output file path without an
+extension receives the `.heic` extension automatically. Output directories must
+already exist. Conversion stops with an error if the output already exists.
 
 ## Test
 
