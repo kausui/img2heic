@@ -1,48 +1,80 @@
 # img2heic
-img2 heic is a command line tool to convert an image file to heic image for Mac.
 
-## System Requirements
-- macOS 15.0 or higher
+`img2heic` is a macOS command-line tool that converts an image file to HEIC
+while preserving its color space, compatible metadata, and dynamic range.
+
+## Features
+
+- Converts ordinary SDR images to 8-bit HEIC.
+- Converts high-bit-depth SDR images to 10-bit HEIC.
+- Preserves an existing HDR/ISO gain map when present.
+- Converts PQ, HLG, and other HDR input to an SDR-compatible HEIC with a gain map.
+- Preserves compatible ICC, EXIF, capture date, GPS, and orientation metadata.
+- Never overwrites the input or an existing output file.
+
+SDR input is not artificially expanded to HDR.
+
+## Requirements
+
+- macOS 15.0 or later
+- Swift 6.0 or later
 
 ## Build
-1. Open the terminal.
-2. Clone the repositry.
-3. Change the directory to the downloaded folder at step 2.
-4. Enter a command "swift build".
-5. img2heic binary is generated in "./.build/arm64-apple-macosx/debug/" OR "./.build/x86_64-apple-macosx/debug/" directory.
+
+```sh
+swift build -c release
+```
+
+The executable is generated under `.build/<architecture>-apple-macosx/release/`.
+You can also locate it with:
+
+```sh
+swift build -c release --show-bin-path
+```
 
 ## Usage
 
-Convert a image file
+```text
+img2heic <input> [-c|--compress <0...1>] [--verbose]
+```
+
+Convert an image using the default compression quality (`0.8`):
+
+```sh
 ./img2heic path-to-image-file
+```
 
-Convert a image file with compression level
-./img2heic path-to-image-file -c 0.9
+Choose a compression quality:
 
-compression level is between 0 to 1.0. 0 means maximum compression. 1.0 means maximum image quality. The default is 0.8. 
+```sh
+./img2heic path-to-image-file --compress 0.9
+```
 
-10 or more bits color file is converted to 10bit heif image.
-Converted image file is generated in the same folder the original file is in.
+Show the detected bit depth, color space, HDR headroom, gain-map status, and
+selected conversion mode:
 
-## LICENSE
-MIT License
+```sh
+./img2heic path-to-image-file --verbose
+```
 
-Copyright (c) 2019 Kanae Usui
+Compression quality must be a finite number from `0` to `1`. A value of `0`
+produces the smallest output; `1` produces the highest image quality supported
+by the encoder.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+The output is written beside the input with a `.heic` extension. For example,
+`photo.jpg` becomes `photo.heic`. Conversion stops with an error if that output
+already exists.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+## Test
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+```sh
+swift test
+```
+
+Real camera inputs are stored under `Tests/img2heicTests/Fixtures`. Their
+retained conversion results for manual comparison are stored under
+`Tests/Expected`.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
